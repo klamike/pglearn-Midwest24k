@@ -21,14 +21,14 @@ If you use this dataset in your work, please cite the appropriate papers.
 Data processing is not required if you cloned the repository.
 
 This code is included for reproducibility.
-1. Download raw demand data files from TAMU (see [here]((https://electricgrids.engr.tamu.edu/texas7k/)))
+1. Download raw demand data files from TAMU (see [here]((https://electricgrids.engr.tamu.edu/texas-am-perform-cases/)))
 2. Copy the following files into the `data/` folder
-    * `Texas7k_20210804.m`
-    * `TX7kMW2020.csv`
-    * `TX7kMvar2020.csv`
+    * `Midwest24k_20220923.m`
+    * `MISOSPP2020MWtimeseries.csv`
+    * `MISOSPP2020MVARtimeseries.csv`
 3. Rename matpower file
     ```bash
-    mv data/Texas7k_20210804.m data/texas7k_TAMU_20210804.m
+    mv data/Midwest24k_20220923.m data/Midwest24k_TAMU_20220923.m
     ```
 3. Execute the data processing script
     ```bash

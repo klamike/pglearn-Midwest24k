@@ -6,7 +6,7 @@ using HDF5
 using Interpolations
 
 """
-    _check_texas7k_demand_data(D; check_type::Bool=true, check_size::Bool=true)
+    _check_midwest24k_demand_data(D; check_type::Bool=true, check_size::Bool=true)
 # Arguments
 * `D::Dict`
 
@@ -17,24 +17,24 @@ using Interpolations
 # Throws
 An error is thrown if some data checks fail
 """
-function _check_texas7k_demand_data(D; check_type::Bool=true, check_size::Bool=true)
+function _check_midwest24k_demand_data(D; check_type::Bool=true, check_size::Bool=true)
 
-    TEXAS7K_DEMAND_SCHEMA = Dict(
+    MIDWEST24K_DEMAND_SCHEMA = Dict(
         "datetime" => Dict(
             "type" => Vector{String},
-            "size" => (8760,),
+            "size" => (8784,),
         ),
         "pd" => Dict(
             "type" => Matrix{Float32},
-            "size" => (8760, 4549),
+            "size" => (8784, 11731),
         ),
         "qd" => Dict(
             "type" => Matrix{Float32},
-            "size" => (8760, 4549),
+            "size" => (8784, 11731),
         ),
     )
 
-    for (k, s) in TEXAS7K_DEMAND_SCHEMA
+    for (k, s) in MIDWEST24K_DEMAND_SCHEMA
         haskey(D, k) || error("Missing key: $k")
         # check type
         v = D[k]
@@ -53,22 +53,22 @@ function _check_texas7k_demand_data(D; check_type::Bool=true, check_size::Bool=t
     return nothing
 end
 
-function _load_texas7k_demand_2020_consolidated()
-    fpath = joinpath(@__DIR__, "data", "texas7k_demand_2020.h5")
+function _load_midwest24k_demand_2020_consolidated()
+    fpath = joinpath(@__DIR__, "data", "midwest24k_demand_2020.h5")
     if !isfile(fpath)
         error("Missing file: ", abspath(normpath(fpath)))
     end
 
-    D = h5read(joinpath(@__DIR__, "data", "texas7k_demand_2020.h5"), "/")
+    D = h5read(joinpath(@__DIR__, "data", "midwest24k_demand_2020.h5"), "/")
 
-    _check_texas7k_demand_data(D)
+    _check_midwest24k_demand_data(D)
     return D
 end
 
-function _load_texas7k_demand_2020_monthly()
+function _load_midwest24k_demand_2020_monthly()
     # Check that all files exist
     fpaths = [
-        joinpath(@__DIR__, "data", @sprintf("texas7k_demand_2020-%02d.h5", mm))
+        joinpath(@__DIR__, "data", @sprintf("midwest24k_demand_2020-%02d.h5", mm))
         for mm in 1:12
     ]
     all(isfile.(fpaths)) || error("Some monthly h5 files are missing; please check that you cloned the repository correctly")
@@ -80,25 +80,25 @@ function _load_texas7k_demand_2020_monthly()
         for k in ["datetime", "pd", "qd"]
     )
 
-    _check_texas7k_demand_data(D)
+    _check_midwest24k_demand_data(D)
     return D
 end
 
 """
-    load_texax7k_demand_2020()
+    load_midwest24k_demand_2020()
 
-Load the Texas7k 2020 demand time series data.
+Load the Midwest24k 2020 demand time series data.
 
 Returns a Dictionary with the following keys
 * `datetime::Vector{String}`: Hourly time stamps
-* `pd::Matrix{Float32}`: a 8760×4549 Matrix of hourly nodal active power demand
-* `qd::Matrix{Float32}`: a 8760×4549 Matrix of hourly nodal reactive power demand
+* `pd::Matrix{Float32}`: a 8785×4549 Matrix of hourly nodal active power demand
+* `qd::Matrix{Float32}`: a 8785×4549 Matrix of hourly nodal reactive power demand
 """
-function load_texas7k_demand_2020()
-    if isfile(joinpath(@__DIR__, "data", "texas7k_demand_2020.h5"))
-        return _load_texas7k_demand_2020_consolidated()
+function load_midwest24k_demand_2020()
+    if isfile(joinpath(@__DIR__, "data", "midwest24k_demand_2020.h5"))
+        return _load_midwest24k_demand_2020_consolidated()
     else
-        return _load_texas7k_demand_2020_monthly()
+        return _load_midwest24k_demand_2020_monthly()
     end
 end
 
@@ -170,8 +170,8 @@ function interpolate_demand(D; time_period::TimePeriod=Minute(5))
 end
 
 function main_interpolate()
-    D = load_texas7k_demand_2020()
-    D_5min = interpolate_demand(D; time_period=Minute(5))
+    D = load_midwest24k_demand_2020()
+    D_5min = interpolate_demand(D; time_period=Minute(10))
 
     # Save to h5 file
     if !isdir(joinpath(@__DIR__, "data", "interpolated"))
@@ -179,7 +179,7 @@ function main_interpolate()
         mkpath(joinpath(@__DIR__, "data", "interpolated"))
     end
 
-    h5open(joinpath(@__DIR__, "data", "interpolated", "texas7k_demand_2020_5min.h5"), "w") do fid
+    h5open(joinpath(@__DIR__, "data", "interpolated", "midwest24k_demand_2020_10min.h5"), "w") do fid
         for (k, v) in D_5min
             fid[k] = v
         end

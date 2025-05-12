@@ -11,9 +11,9 @@ PowerModels.silence()
 function extract_load_time_series()
 
     # load active & reactive power dataset
-    df_pd = CSV.read(joinpath(@__DIR__, "data", "TX7kMW2020.csv"), DataFrame, header=2)
-    df_qd = CSV.read(joinpath(@__DIR__, "data", "TX7kMvar2020.csv"), DataFrame, header=2)
-    df_qd = df_qd[1:8760, :]  # trim excess rows in reactive load  data
+    df_pd = CSV.read(joinpath(@__DIR__, "data", "MISOSPP2020MWtimeseries.csv"), DataFrame, header=2)
+    df_qd = CSV.read(joinpath(@__DIR__, "data", "MISOSPP2020MVARtimeseries.csv"), DataFrame, header=2)
+    # df_qd = df_qd[1:8760, :]  # trim excess rows in reactive load  data
 
     # Rename dataframe columns
     rename!(df_pd, Dict(s => prod(split(s)[2:3]) for s in names(df_pd)[6:end]))
@@ -28,11 +28,11 @@ function extract_load_time_series()
 
     # The original PD data skipped Feb 29th in the time stamps :(
     # To fix it, we need to shift every datetime back by 24 hours, starting March 1st
-    for (i, dt) in enumerate(df_pd.datetime)
-        if dt > DateTime(2020, 02, 28, 23, 59)
-            df_pd.datetime[i] -= Hour(24)
-        end
-    end
+    # for (i, dt) in enumerate(df_pd.datetime)
+    #     if dt > DateTime(2020, 02, 28, 23, 59)
+    #         df_pd.datetime[i] -= Hour(24)
+    #     end
+    # end
 
     # Make sure everything is sorted
     sort!(df_pd, :datetime)
@@ -85,8 +85,8 @@ function process_generator_costs!(network)
     return nothing
 end
 
-function main_texas7k()
-    network = PowerModels.parse_matpower(joinpath(@__DIR__, "data", "texas7k_TAMU_20210804.m"))
+function main_midwest24k()
+    network = PowerModels.parse_matpower(joinpath(@__DIR__, "data", "Midwest24k_TAMU_20220923.m"))
     process_generator_costs!(network)
 
     # Get active/reactive load time series
@@ -123,7 +123,7 @@ function main_texas7k()
     end
 
     # Tensorize active/reactive load
-    T = 8760  # 365 * 24 hours, hardcoded
+    T = 8784  # 366 * 24 hours, hardcoded
     L = length(network["load"])
     pd = zeros(Float32, T, L)
     qd = zeros(Float32, T, L)
@@ -133,7 +133,7 @@ function main_texas7k()
         qd[:, l] .= QD[i]
     end
 
-    dts = collect(DateTime(2020, 01, 01, 00, 00):Hour(1):DateTime(2020, 12, 30, 23, 00,))
+    dts = collect(DateTime(2020, 01, 01, 00, 00):Hour(1):DateTime(2020, 12, 31, 23, 00,))
     demand_data = Dict(
         "datetime" => string.(dts),
         "pd" => pd,
@@ -147,11 +147,11 @@ function main_texas7k()
 end
 
 if abspath(PROGRAM_FILE) == @__FILE__
-    network_basic, demand_data = main_texas7k()
+    network_basic, demand_data = main_midwest24k()
 
     # Save network to JSON
     println("Exporting network data (JSON format)")
-    open(joinpath(@__DIR__, "data", "texas7k_case.json"), "w") do io
+    open(joinpath(@__DIR__, "data", "Midwest24k_20220923_case.json"), "w") do io
         JSON.print(io, network_basic)
     end
 
@@ -161,7 +161,7 @@ if abspath(PROGRAM_FILE) == @__FILE__
     months = month.(dts)
     for mm in 1:12
         Ts = (months .== mm)
-        h5open(joinpath(@__DIR__, "data", @sprintf("texas7k_demand_2020-%02d.h5", mm)), "w") do fid
+        h5open(joinpath(@__DIR__, "data", @sprintf("midwest24k_demand_2020-%02d.h5", mm)), "w") do fid
             fid["datetime"] = demand_data["datetime"][Ts]
             fid["pd"] = demand_data["pd"][Ts, :]
             fid["qd"] = demand_data["qd"][Ts, :]
@@ -169,7 +169,7 @@ if abspath(PROGRAM_FILE) == @__FILE__
     end
     # Also export a single h5 file (for local use)
     println("Exporting load data (consolidate H5 file)")
-    h5open(joinpath(@__DIR__, "data", "texas7k_demand_2020.h5"), "w") do fid
+    h5open(joinpath(@__DIR__, "data", "midwest24k_demand_2020.h5"), "w") do fid
         fid["datetime"] = demand_data["datetime"]
         fid["pd"] = demand_data["pd"]
         fid["qd"] = demand_data["qd"]
